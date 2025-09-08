@@ -1,6 +1,5 @@
 <template>
   <div class="pa-4 pa-md-6">
-    <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-6 flex-wrap">
       <div
         v-if="!isEditingTitle"
@@ -33,7 +32,6 @@
       </div>
     </div>
 
-    <!-- Filtro + Busca -->
     <div class="d-flex flex-column flex-md-row align-center mb-8">
       <v-btn
         color="primary"
@@ -53,7 +51,6 @@
       />
     </div>
 
-    <!-- Colunas -->
     <v-row dense>
       <v-col
         v-for="(col, index) in columns"
@@ -83,13 +80,10 @@
           class="d-flex flex-column card-list"
           :data-status="col.key"
           @end="onDragEnd"
-          handle=".drag-handle"
         >
           <template #item="{ element }">
             <v-card class="kanban-card pa-4" @click="openViewModal(element)">
-              <div
-                class="d-flex justify-space-between align-center drag-handle"
-              >
+              <div class="d-flex justify-space-between align-center">
                 <div class="text-subtitle-2 font-weight-bold">
                   {{ element.title }}
                 </div>
@@ -110,20 +104,21 @@
                 </v-chip>
               </div>
 
-              <v-icon
-                class="icon-only delete-icon"
-                size="24"
-                @click.stop="askDelete(element)"
-              >
-                mdi-trash-can-outline
-              </v-icon>
+              <div class="delete-area">
+                <v-icon
+                  class="icon-only delete-icon"
+                  size="24"
+                  @click.stop="askDelete(element)"
+                >
+                  mdi-trash-can-outline
+                </v-icon>
+              </div>
             </v-card>
           </template>
         </draggable>
       </v-col>
     </v-row>
 
-    <!-- View Modal -->
     <v-dialog v-model="viewDialog" max-width="600px">
       <v-card class="pa-6">
         <div class="d-flex justify-space-between align-center mb-3">
@@ -150,7 +145,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Create/Edit Modal -->
     <v-dialog v-model="editDialog" max-width="600px">
       <v-card>
         <v-card-title>
@@ -190,7 +184,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Delete Modal -->
     <v-dialog v-model="deleteDialog" max-width="400px">
       <v-card class="pa-6 text-center">
         <p class="mb-6">Deseja excluir este item?</p>
@@ -205,7 +198,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Snackbar -->
     <v-snackbar
       v-model="snackbar"
       color="green"
@@ -463,7 +455,7 @@ export default defineComponent({
   border-radius: 16px;
   box-shadow: 0 6px 16px rgba(17, 24, 39, 0.08);
   background: #fff;
-  cursor: pointer;
+  cursor: grab;
   margin-bottom: 16px;
   min-height: 160px;
   display: flex;
@@ -472,10 +464,20 @@ export default defineComponent({
   position: relative;
 }
 
-.delete-icon {
+.delete-area {
   position: absolute;
   bottom: 14px;
   right: 14px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  pointer-events: all;
+}
+
+.delete-icon {
   padding: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
@@ -496,10 +498,6 @@ export default defineComponent({
 }
 .icon-only:hover {
   color: #7c3aed;
-}
-
-.drag-handle {
-  cursor: grab;
 }
 
 .fab-plus {
@@ -558,7 +556,7 @@ export default defineComponent({
     min-height: 140px;
     margin-bottom: 20px;
   }
-  .delete-icon {
+  .delete-area {
     bottom: 10px;
     right: 10px;
   }
