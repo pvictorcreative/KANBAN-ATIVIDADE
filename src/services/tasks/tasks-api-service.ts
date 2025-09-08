@@ -1,32 +1,38 @@
-import api from '@/services/interceptor';
-import CardType from '@/types/CardType';
+import axios from "axios";
 
-class TasksApiService {
- async getAll() {
-    const {data} = await api.get('/tasks');
-    return data.items
- }
- async getId(id:string) {
-   console.log("metodo recebido", id)
-    const {data} = await api.get(`/tasks/${id}`);
-   return data
- }
-    async post(tasks:CardType) {
-    const response = await api.post('/tasks', tasks);
-    console.log(response.data);
- } 
- async put(tasks:CardType) {
-    const response = await api.put(`/tasks/${tasks.id}`, tasks);
-    console.log(response.data);
- } 
- async patch(tasks:CardType) {
-    const response = await api.patch(`/tasks/${tasks.id}`, tasks);
-    console.log(response.data);
- } 
- async delete(id:string) {
-    const response = await api.delete(`/tasks/${id}`);
-    console.log(response.data);
- }
+export type StatusKey = "todo" | "doing" | "done";
+
+export interface CardType {
+  id?: string;
+  title: string;
+  description: string;
+  labels: string[];
+  status: StatusKey;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export default new TasksApiService();
+const API_URL = "https://kanban-backend-mu.vercel.app/api/tasks";
+
+export default {
+  async getAll(): Promise<CardType[]> {
+    const { data } = await axios.get<{ items: CardType[] }>(API_URL);
+    return data.items;
+  },
+
+  async create(
+    task: Omit<CardType, "id" | "created_at" | "updated_at">
+  ): Promise<CardType> {
+    const { data } = await axios.post<CardType>(API_URL, task);
+    return data;
+  },
+
+  async update(id: string, task: Partial<CardType>): Promise<CardType> {
+    const { data } = await axios.patch<CardType>(`${API_URL}/${id}`, task);
+    return data;
+  },
+
+  async delete(id: string): Promise<void> {
+    await axios.delete(`${API_URL}/${id}`);
+  },
+};
