@@ -1,13 +1,17 @@
 <template>
-  <div class="pa-6">
-    <div class="d-flex align-center justify-space-between mb-6">
-      <div v-if="!isEditingTitle" class="d-flex align-center flex-grow-1">
+  <div class="pa-4 pa-md-6">
+    <!-- Header -->
+    <div class="d-flex align-center justify-space-between mb-6 flex-wrap">
+      <div
+        v-if="!isEditingTitle"
+        class="d-flex align-center flex-grow-1 mb-2 mb-md-0"
+      >
         <h2 class="font-weight-bold text-h5">{{ boardTitle }}</h2>
         <v-icon class="icon-only ml-2" @click="startEditingTitle">
           mdi-pencil-outline
         </v-icon>
       </div>
-      <div v-else class="d-flex align-center flex-grow-1">
+      <div v-else class="d-flex align-center flex-grow-1 mb-2 mb-md-0">
         <v-text-field
           v-model="tempBoardTitle"
           variant="underlined"
@@ -29,11 +33,12 @@
       </div>
     </div>
 
-    <div class="d-flex align-center mb-8">
+    <!-- Filtro + Busca -->
+    <div class="d-flex flex-column flex-md-row align-center mb-8">
       <v-btn
         color="primary"
         prepend-icon="mdi-filter-variant"
-        class="mr-4 btn-filter"
+        class="mr-0 mr-md-4 mb-3 mb-md-0 btn-filter"
       >
         Filtrar
       </v-btn>
@@ -48,9 +53,16 @@
       />
     </div>
 
+    <!-- Colunas -->
     <v-row dense>
-      <v-col v-for="(col, index) in columns" :key="col.key" cols="12" sm="4">
-        <div class="d-flex align-center">
+      <v-col
+        v-for="(col, index) in columns"
+        :key="col.key"
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <div class="d-flex align-center mb-3">
           <v-chip size="small" class="mr-2" color="secondary">
             {{ index + 1 }}
           </v-chip>
@@ -71,10 +83,13 @@
           class="d-flex flex-column card-list"
           :data-status="col.key"
           @end="onDragEnd"
+          handle=".drag-handle"
         >
           <template #item="{ element }">
             <v-card class="kanban-card pa-4" @click="openViewModal(element)">
-              <div class="d-flex justify-space-between align-center">
+              <div
+                class="d-flex justify-space-between align-center drag-handle"
+              >
                 <div class="text-subtitle-2 font-weight-bold">
                   {{ element.title }}
                 </div>
@@ -97,7 +112,7 @@
 
               <v-icon
                 class="icon-only delete-icon"
-                size="20"
+                size="24"
                 @click.stop="askDelete(element)"
               >
                 mdi-trash-can-outline
@@ -108,6 +123,7 @@
       </v-col>
     </v-row>
 
+    <!-- View Modal -->
     <v-dialog v-model="viewDialog" max-width="600px">
       <v-card class="pa-6">
         <div class="d-flex justify-space-between align-center mb-3">
@@ -134,6 +150,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- Create/Edit Modal -->
     <v-dialog v-model="editDialog" max-width="600px">
       <v-card>
         <v-card-title>
@@ -163,7 +180,8 @@
           <v-btn class="btn-soft" @click="closeEdit">Cancelar</v-btn>
           <v-btn
             class="btn-primary-gradient"
-            :disabled="!form.title.trim()"
+            :disabled="!form.title.trim() || isSaving"
+            :loading="isSaving"
             @click="saveTask"
           >
             Salvar
@@ -172,6 +190,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- Delete Modal -->
     <v-dialog v-model="deleteDialog" max-width="400px">
       <v-card class="pa-6 text-center">
         <p class="mb-6">Deseja excluir este item?</p>
@@ -186,6 +205,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- Snackbar -->
     <v-snackbar
       v-model="snackbar"
       color="green"
@@ -210,7 +230,7 @@ import draggable from "vuedraggable";
 import TasksApiService, {
   CardType,
   StatusKey,
-} from "../services/tasks/tasks-api-service";
+} from "@/services/tasks/tasks-api-service";
 
 export default defineComponent({
   name: "KanbanBoard",
@@ -232,12 +252,13 @@ export default defineComponent({
 
     const snackbar = ref(false);
     const snackbarMessage = ref("");
+    const isSaving = ref(false);
 
-    const form = ref({
+    const form = ref<CardType>({
       title: "",
       description: "",
-      labels: [] as string[],
-      status: "todo" as StatusKey,
+      labels: [],
+      status: "todo",
     });
 
     const columns = [
@@ -280,12 +301,7 @@ export default defineComponent({
     const openEditModal = (task: CardType | null) => {
       if (task) {
         editingTask.value = task;
-        form.value = {
-          title: task.title,
-          description: task.description,
-          labels: [...task.labels],
-          status: task.status,
-        };
+        form.value = { ...task };
       } else {
         editingTask.value = null;
         form.value = { title: "", description: "", labels: [], status: "todo" };
@@ -305,30 +321,41 @@ export default defineComponent({
     };
 
     const saveTask = async () => {
-      if (!form.value.title.trim()) return;
+      if (isSaving.value || !form.value.title.trim()) return;
+      isSaving.value = true;
 
-      if (editingTask.value) {
-        const updated = await TasksApiService.update(editingTask.value.id!, {
-          title: form.value.title,
-          description: form.value.description,
-          labels: form.value.labels,
-          status: form.value.status,
-        });
-        tasks.value = tasks.value.map((t) =>
-          t.id === updated.id ? updated : t
-        );
-        selectedTask.value = updated;
-      } else {
-        const created = await TasksApiService.create({
-          title: form.value.title,
-          description: form.value.description,
-          labels: form.value.labels,
-          status: form.value.status,
-        });
-        tasks.value.push(created);
+      try {
+        if (editingTask.value) {
+          const updated = await TasksApiService.update(editingTask.value.id!, {
+            ...editingTask.value,
+            ...form.value,
+            updated_at: new Date().toISOString(),
+          });
+
+          tasks.value = tasks.value.map((t) =>
+            t.id === updated.id ? updated : t
+          );
+
+          if (selectedTask.value?.id === updated.id) {
+            selectedTask.value = updated;
+          }
+        } else {
+          const created = await TasksApiService.create({
+            title: form.value.title,
+            description: form.value.description,
+            labels: form.value.labels,
+            status: form.value.status,
+          });
+          tasks.value.push(created);
+        }
+
+        editDialog.value = false;
+        showSnackbar("Ação realizada com sucesso");
+      } catch (err) {
+        console.error("Erro ao salvar:", err);
+      } finally {
+        isSaving.value = false;
       }
-      editDialog.value = false;
-      showSnackbar("Ação realizada com sucesso");
     };
 
     const askDelete = (task: CardType) => {
@@ -337,13 +364,24 @@ export default defineComponent({
     };
 
     const confirmDelete = async () => {
-      if (taskToDelete.value) {
+      if (!taskToDelete.value) return;
+
+      try {
         await TasksApiService.delete(taskToDelete.value.id!);
+
         tasks.value = tasks.value.filter(
           (t) => t.id !== taskToDelete.value!.id
         );
+
+        if (selectedTask.value?.id === taskToDelete.value.id) {
+          selectedTask.value = null;
+          viewDialog.value = false;
+        }
+
         deleteDialog.value = false;
         showSnackbar("Item excluído com sucesso");
+      } catch (err) {
+        console.error("Erro ao excluir:", err);
       }
     };
 
@@ -353,10 +391,16 @@ export default defineComponent({
 
       if (task && newStatus && task.status !== newStatus) {
         task.status = newStatus;
-        await TasksApiService.update(task.id!, { status: newStatus });
+
+        await TasksApiService.update(task.id!, {
+          ...task,
+          status: newStatus,
+          updated_at: new Date().toISOString(),
+        });
+
         tasks.value = tasks.value.map((t) =>
           t.id === task.id ? { ...t, status: newStatus } : t
-        );
+        ) as CardType[];
       }
     };
 
@@ -397,6 +441,7 @@ export default defineComponent({
       statusLists,
       snackbar,
       snackbarMessage,
+      isSaving,
       openViewModal,
       openEditModal,
       openCreateModal,
@@ -416,11 +461,11 @@ export default defineComponent({
 <style scoped>
 .kanban-card {
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.08);
   background: #fff;
   cursor: pointer;
-  margin-bottom: 12px;
-  min-height: 150px;
+  margin-bottom: 16px;
+  min-height: 160px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -429,8 +474,11 @@ export default defineComponent({
 
 .delete-icon {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: 14px;
+  right: 14px;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .tag {
@@ -448,6 +496,10 @@ export default defineComponent({
 }
 .icon-only:hover {
   color: #7c3aed;
+}
+
+.drag-handle {
+  cursor: grab;
 }
 
 .fab-plus {
@@ -475,18 +527,18 @@ export default defineComponent({
 
 .btn-filter {
   border-radius: 12px !important;
-  padding: 8px 24px !important;
+  padding: 10px 20px !important;
   font-weight: 600;
   min-width: 120px;
 }
 
 .v-col {
-  padding-left: 16px !important;
-  padding-right: 16px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
 }
 
 .card-list {
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .search-input .v-field {
@@ -499,5 +551,16 @@ export default defineComponent({
 .search-input .v-field--focused .v-field__outline {
   border-color: #7c3aed;
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25);
+}
+
+@media (max-width: 600px) {
+  .kanban-card {
+    min-height: 140px;
+    margin-bottom: 20px;
+  }
+  .delete-icon {
+    bottom: 10px;
+    right: 10px;
+  }
 }
 </style>

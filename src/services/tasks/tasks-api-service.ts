@@ -27,8 +27,8 @@ export default {
     return data;
   },
 
-  async update(id: string, task: Partial<CardType>): Promise<CardType> {
-    const { data } = await axios.patch<CardType>(`${API_URL}/${id}`, task);
+  async update(id: string, task: CardType): Promise<CardType> {
+    const { data } = await axios.put<CardType>(`${API_URL}/${id}`, task);
     return data;
   },
 
